@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+DISK="<%= input('device_disk') %>"
+VGNAME="<%= input('vg_name') %>"
+
+# Check if disk exists
+if [ ! -b "$DISK" ]; then
+  echo "Disk $DISK does not exist. Exiting."
+  exit 0
+fi
+
+# Check if disk has partitions
+if lsblk -n -o NAME "$DISK" | grep -q "^$(basename ${DISK})[0-9]"; then
+  echo "Disk $DISK already has partitions. No action taken."
+  exit 0
+fi
+
+# Check if disk is already a Physical Volume (PV)
+if pvs "$DISK" &>/dev/null; then
+  echo "Disk $DISK is already a Physical Volume. Skipping pvcreate."
+else
+  echo "Creating Physical Volume on $DISK"
+  pvcreate "$DISK"
+fi
+
+# Check if disk is already in Volume Group
+if vgdisplay "$VGNAME" | grep -q "$DISK"; then
+  echo "Disk $DISK is already part of Volume Group $VGNAME. Nothing to do."
+else
+  echo "Adding $DISK to Volume Group $VGNAME"
+  vgextend "$VGNAME" "$DISK"
+fi
+
+echo "Done."
+exit 0
