@@ -1,0 +1,45 @@
+---
+- hosts: all
+  tasks:
+    - name: Ensure required packages are installed
+      package:
+        name:
+          - lvm2
+          - parted
+        state: present
+
+    - name: Create Logical Volume
+      community.general.lvol:
+        vg: "<%= input('volume_group') %>"
+        lv: "<%= input('logical_volume') %>"
+        size: "<%= input('partition_size') %>"
+        state: present
+
+    - name: Create filesystem on Logical Volume
+      filesystem:
+        fstype: "<%= input('filesystem_type') %>"
+        dev: "/dev/<%= input('volume_group') %>/<%= input('logical_volume') %>"
+        
+    - name: Create mount point
+      file:
+        path: "<%= input('mount_point') %>"
+        state: directory
+        mode: '0755'
+        
+    - name: Mount the filesystem
+      mount:
+        path: "<%= input('mount_point') %>"
+        src: "/dev/<%= input('volume_group') %>/<%= input('logical_volume') %>"
+        fstype: "<%= input('filesystem_type') %>"
+        opts: defaults
+        state: mounted
+
+    - name: Ensure mount persists on reboot
+      mount:
+        path: "<%= input('mount_point') %>"
+        src: "/dev/<%= input('volume_group') %>/<%= input('logical_volume') %>"
+        fstype: "<%= input('filesystem_type') %>"
+        opts: defaults
+        state: present
+
+
