@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Get current FQDN
+current_fqdn=$(hostname -f)
+echo "Current FQDN: $current_fqdn"
+
+# Extract short hostname
+short_hostname=$(echo "$current_fqdn" | cut -d'.' -f1)
+echo "Short hostname to set: $short_hostname"
+
+# Set new hostname
+sudo hostnamectl set-hostname "$short_hostname"
+
+# Confirm change
+echo "Hostname changed to: $(hostname)"
+
+# Optional: Update /etc/hosts if needed
+# (only if the FQDN is mapped to 127.0.0.1 or similar and needs replacing)
+if grep -q "$current_fqdn" /etc/hosts; then
+    echo "Updating /etc/hosts..."
+    sudo sed -i "s/$current_fqdn/$short_hostname/g" /etc/hosts
+fi
+
+echo "Done."
