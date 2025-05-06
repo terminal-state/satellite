@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Usage: ./expand_lvm.sh <VG_NAME> <LV_NAME> <SIZE_TO_ADD> (e.g., 5G)
+
+VG_NAME="<%= input('vg_name') %>"
+LV_NAME="<%= input('lvm_name') %>"
+SIZE_TO_ADD="<%= input('size_increase') %>"
+
+# Validate inputs
+if [[ -z "$VG_NAME" || -z "$LV_NAME" || -z "$SIZE_TO_ADD" ]]; then
+  echo "Usage: $0 <VG_NAME> <LV_NAME> <SIZE_TO_ADD (e.g., 5G)>"
+  exit 1
+fi
+
+LV_PATH="/dev/${VG_NAME}/${LV_NAME}"
+
+# Check if LV exists
+if ! lvdisplay "$LV_PATH" > /dev/null 2>&1; then
+  echo "Error: Logical Volume $LV_PATH does not exist."
+  exit 1
+fi
+
+# Expand the logical volume
+echo "Expanding LV $LV_PATH by $SIZE_TO_ADD..."
+lvextend -L +"$SIZE_TO_ADD" "$LV_PATH"
+if [[ $? -ne 0 ]]; then
+  echo "Error: Failed to expand logical volume."
+  exit 1
+fi
+
+# Detect the filesystem type
+FSTYPE=$(blkid -o value -s TYPE "$LV_PATH")
+if [[ "$FSTYPE" == "xfs" ]]; then
+  echo "Detected XFS filesystem. Running xfs_growfs..."
+  xfs_growfs "$LV_PATH"
+elif [[ "$FSTYPE" == "ext4" ]]; then
+  echo "Detected ext4 filesystem. Running resize2fs..."
+  resize2fs "$LV_PATH"
+else
+  echo "Error: Unsupported or unknown filesystem type: $FSTYPE"
+  exit 1
+fi
+
+echo "Logical Volume $LV_PATH successfully expanded by $SIZE_TO_ADD."
