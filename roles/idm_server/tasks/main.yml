@@ -1,0 +1,21 @@
+---
+# tasks file for idm_server
+- name: Determine IDM server type
+  set_fact:
+    idm_server_type: >-
+      {% if inventory_hostname | regex_search('idm0?1(\..*)?$') %}
+      master
+      {% else %}
+      replica
+      {% endif %}
+
+- debug:
+    msg: "Host {{ inventory_hostname }} will be treated as {{ idm_server_type }}"
+
+- name: Include tasks for master
+  include_tasks: master.yml
+  when: idm_server_type == "master"
+
+- name: Include tasks for replica
+  include_tasks: replica.yml
+  when: idm_server_type == "replica"
