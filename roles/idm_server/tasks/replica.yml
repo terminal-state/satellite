@@ -1,0 +1,27 @@
+- name: Check if IPA replica is already configured
+  stat:
+    path: /etc/ipa/default.conf
+  register: ipa_config
+
+- name: Install IPA replica with DNS
+  command: >
+    ipa-replica-install
+      {% if idm_setup_dns | bool %}
+      --setup-dns
+      {% if idm_forwarders %}
+      --forwarder {{ idm_forwarders | replace(',', ' --forwarder ') }}
+      {% endif %}
+      {% endif %}
+      --unattended
+      --principal admin
+      --password {{ idm_admin_password }}
+      --server {{ idm_primary_server }}
+  args:
+    creates: /etc/ipa/default.conf
+  when: not ipa_config.stat.exists
+
+- name: Enable and start IPA
+  service:
+    name: ipa
+    state: started
+    enabled: true
