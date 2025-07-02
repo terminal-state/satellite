@@ -1,3 +1,16 @@
+- name: Enable IDM module
+  ansible.builtin.command:
+    cmd: dnf module enable -y idm:DL1
+  args:
+    creates: /etc/dnf/modules.d/idm.module
+
+- name: Install IPA server packages
+  package:
+    name:
+      - ipa-server
+      - ipa-server-dns
+    state: present
+
 - name: Check if IPA master is already configured
   stat:
     path: /etc/ipa/default.conf
@@ -26,9 +39,8 @@
       --no-host-dns
       {% endif %}
       --unattended
-  args:
-    creates: /etc/ipa/default.conf
   when: not ipa_config.stat.exists
+
 
 - name: Enable and start IPA
   service:
