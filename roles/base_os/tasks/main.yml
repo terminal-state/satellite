@@ -1,0 +1,41 @@
+---
+# tasks file for base_os_config
+- name: Set system timezone
+  community.general.timezone:
+    name: "{{ time-zone }}"
+
+- name: Configure chrony with NTP servers
+  block:
+    - name: Install chrony
+      package:
+        name: chrony
+        state: present
+
+    - name: Configure NTP servers in chrony.conf
+      lineinfile:
+        path: /etc/chrony.conf
+        regexp: '^server'
+        line: "server {{ item }} iburst"
+        state: present
+      loop: "{{ base_ntp_servers.split(',') }}"
+      notify: Restart chronyd
+
+    - name: Ensure chronyd is enabled and started
+      service:
+        name: chronyd
+        enabled: true
+        state: started
+
+- name: Enable pam_mkhomedir to create home directories
+  lineinfile:
+    path: /etc/pam.d/system-auth
+    regexp: '^session\s+required\s+pam_mkhomedir.so'
+    line: 'session    required     pam_mkhomedir.so skel=/etc/skel/ umask=0077'
+    state: present
+    insertafter: '^session'
+
+- name: Disable and stop firewalld
+  service:
+    name: firewalld
+    state: stopped
+    enabled: false
