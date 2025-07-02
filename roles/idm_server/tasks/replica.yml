@@ -1,3 +1,16 @@
+- name: Enable IDM module
+  ansible.builtin.command:
+    cmd: dnf module enable -y idm:DL1
+  args:
+    creates: /etc/dnf/modules.d/idm.module
+
+- name: Install IPA server packages
+  package:
+    name:
+      - ipa-server
+      - ipa-server-dns
+    state: present
+
 - name: Check if IPA replica is already configured
   stat:
     path: /etc/ipa/default.conf
