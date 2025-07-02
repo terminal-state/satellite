@@ -1,38 +1,90 @@
-Role Name
-=========
+# idm_server Ansible Role
 
-A brief description of the role goes here.
+This role installs and configures Red Hat Identity Management (IdM / FreeIPA) servers, supporting both **master** and **replica** modes, and is designed for use with Red Hat Satellite 6.x or 7.x.  
 
-Requirements
-------------
+It also supports optional integrated DNS configuration.
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+---
 
-Role Variables
---------------
+## Features
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+✅ Installs IdM server or replica based on hostname pattern  
+✅ Handles DNS server configuration via Satellite parameters  
+✅ Idempotent — safe to re-run  
+✅ Supports AlmaLinux / RHEL 8 module streams  
+✅ Parameters fully driven by Satellite host group parameters
 
-Dependencies
-------------
+---
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+## How to use with Satellite
 
-Example Playbook
-----------------
+1. **Import the role into Satellite**  
+   - Package this role as a tarball and upload it under  
+     `Configure → Ansible Roles → Import`  
+   - or place it in `/etc/ansible/roles/` on your Capsule and re-synchronize roles
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+2. **Assign the role**  
+   - Go to `Configure → Host Groups → Your IDM Host Group → Ansible Roles`  
+   - Attach the `idm_server` role
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+3. **Set host group parameters**  
 
-License
--------
+Add these parameters to your Satellite host group:  
 
-BSD
+| Parameter                | Example                           |
+|--------------------------|-----------------------------------|
+| `idm_domain`             | `example.com`                     |
+| `idm_realm`              | `EXAMPLE.COM`                     |
+| `idm_ds_password`        | `DirectoryManagerSecret`          |
+| `idm_admin_password`     | `AdminSecret`                     |
+| `idm_setup_dns`          | `true`                            |
+| `idm_forwarders`         | `8.8.8.8,1.1.1.1`                 |
+| `idm_allow_zone_overlap` | `false`                           |
+| `idm_auto_reverse`       | `true`                            |
+| `idm_no_host_dns`        | `true`                            |
+| `idm_ntp_servers`        | `ntp.example.com`                 |
+| `idm_primary_server`     | `idm01.example.com`               |
 
-Author Information
-------------------
+> Use Satellite parameter *type* `boolean` for true/false values to avoid string parsing problems.  
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+> Use the *hidden* option for secure items like `idm_admin_password`.  
+
+4. **Configure Ansible for the host**  
+   - Ensure the host has `Ansible` enabled under its Host settings  
+   - Confirm the Capsule can run Ansible jobs for the content view/lifecycle environment
+
+5. **Trigger the play**  
+   - Run a remote execution job  
+   - or wait for the next Puppet/Ansible pull  
+   - Satellite will apply the role, using the parameters above  
+
+---
+
+## How this role works
+
+✅ Detects master vs replica based on your hostname (by default, any hostname containing `idm01` is treated as master)  
+✅ Enables the correct IdM module (`idm:DL1`) on RHEL/AlmaLinux 8  
+✅ Installs required IdM packages  
+✅ Configures the server with DNS and chrony  
+✅ Idempotent — will skip re-installing if `/etc/ipa/default.conf` is present  
+✅ Uses Satellite group parameters to stay flexible
+
+---
+
+## Host naming convention
+
+This role uses this pattern to choose server type:  
+
+- `idm0?1.*` → master  
+- everything else → replica  
+
+You can adapt this in `tasks/main.yml` with your own regex if needed.
+
+---
+
+## Notes
+
+- Make sure your Satellite Capsule has the **community.general** collection installed if you use modules like `community.general.timezone`.  
+- You can install it on the Capsule:  
+  ```bash
+  ansible-galaxy collection install -p /usr/share/ansible/collections community.general
