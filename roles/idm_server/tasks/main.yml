@@ -3,11 +3,10 @@
 - name: Determine IDM server type
   set_fact:
     idm_server_type: >-
-      {% if inventory_hostname | regex_search('idm0?1(\..*)?$') %}
-      master
-      {% else %}
-      replica
-      {% endif %}
+      {{ (
+        'master' if inventory_hostname | regex_search('idm0?1(\..*)?$')
+        else 'replica'
+      ) | trim }}
 
 - debug:
     msg: "Host {{ inventory_hostname }} will be treated as {{ idm_server_type }}"
